@@ -9294,7 +9294,7 @@ export function getCompilerOptionValue(options: CompilerOptions, option: Command
 /** @internal */
 export function getJSXTransformEnabled(options: CompilerOptions): boolean {
     const jsx = options.jsx;
-    return jsx === JsxEmit.React || jsx === JsxEmit.ReactJSX || jsx === JsxEmit.ReactJSXDev;
+    return jsx === JsxEmit.React || jsx === JsxEmit.ReactJSX || jsx === JsxEmit.ReactJSXDev || jsx === JsxEmit.IncrementalDOM;
 }
 
 /** @internal */

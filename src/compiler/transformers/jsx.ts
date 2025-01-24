@@ -6,6 +6,7 @@ import {
     createExpressionForJsxElement,
     createExpressionForJsxFragment,
     createExpressionFromEntityName,
+    createIncrementalDOMExpressionForJsxElement,
     createJsxFactoryExpression,
     Debug,
     emptyArray,
@@ -377,30 +378,54 @@ export function transformJsx(context: TransformationContext): (x: SourceFile | B
         return element;
     }
 
+
+    function convertJsxAttributesToCommaList(tagName: Expression, attrs: readonly (JsxSpreadAttribute | JsxAttribute)[], callee: Expression) {
+        const hasProps = attrs.length > 0;
+        if (!hasProps) {
+            return factory.createCallExpression(callee as Expression, /*typeArguments*/ undefined, [factory.createStringLiteral("elementOpen"), tagName]);
+        }
+        const props = flatten(spanMap(attrs, isJsxSpreadAttribute, (attrs, isSpread) => flatten(map(attrs, attr => isSpread ? factory.createNull() : transformJsxAttributeToFunctionCall(callee as Expression, attr as JsxAttribute)))));
+        const elementOpenStartCall = factory.createCallExpression(callee as Expression, /*typeArguments*/ undefined, [factory.createStringLiteral("elementOpenStart"), tagName]);
+        const elementOpenEndCall = factory.createCallExpression(callee as Expression, /*typeArguments*/ undefined, [factory.createStringLiteral("elementOpenEnd")]);
+        return factory.createCommaListExpression([elementOpenStartCall, ...props, elementOpenEndCall]);
+    }
+
+    function transformJsxAttributeToFunctionCall(callee: Expression, node: JsxAttribute) {
+        const name = factory.createStringLiteral(idText(node.name as Identifier));
+        const expression = transformJsxAttributeInitializer(node.initializer);
+        return factory.createCallExpression(callee, /*typeArguments*/ undefined, [factory.createStringLiteral("attr"), name, expression]);
+    }
+    
     function visitJsxOpeningLikeElementCreateElement(node: JsxOpeningLikeElement, children: readonly JsxChild[] | undefined, isChild: boolean, location: TextRange) {
         const tagName = getTagName(node);
-        const attrs = node.attributes.properties;
-        const objectProperties = length(attrs) ? transformJsxAttributesToObjectProps(attrs) :
-            factory.createNull(); // When there are no attributes, React wants "null"
-
         const callee = currentFileState.importSpecifier === undefined
-            ? createJsxFactoryExpression(
-                factory,
-                context.getEmitResolver().getJsxFactoryEntity(currentSourceFile),
-                compilerOptions.reactNamespace!, // TODO: GH#18217
-                node,
-            )
-            : getImplicitImportForName("createElement");
+        ? createJsxFactoryExpression(
+            factory,
+            context.getEmitResolver().getJsxFactoryEntity(currentSourceFile),
+            compilerOptions.reactNamespace!, // TODO: GH#18217
+            node,
+        )
+        : getImplicitImportForName("createElement");
+        
+        const attrs = node.attributes.properties;
 
-        const element = createExpressionForJsxElement(
+        const element = compilerOptions.jsx === JsxEmit.IncrementalDOM
+        ? createIncrementalDOMExpressionForJsxElement(
+            factory,
+            callee,
+            convertJsxAttributesToCommaList(tagName, attrs, callee),
+            mapDefined(children, transformJsxChildToExpression),
+            location,
+        )
+        : createExpressionForJsxElement(
             factory,
             callee,
             tagName,
-            objectProperties,
+            length(attrs) ? transformJsxAttributesToObjectProps(attrs) : factory.createNull(), // When there are no attributes, React wants "null"
             mapDefined(children, transformJsxChildToExpression),
             location,
         );
-
+        
         if (isChild) {
             startOnNewLine(element);
         }
@@ -451,7 +476,7 @@ export function transformJsx(context: TransformationContext): (x: SourceFile | B
         return factory.createSpreadAssignment(Debug.checkDefined(visitNode(node.expression, visitor, isExpression)));
     }
 
-    function transformJsxAttributesToObjectProps(attrs: readonly (JsxSpreadAttribute | JsxAttribute)[], children?: PropertyAssignment) {
+    function transformJsxAttributesToObjectProps(attrs: readonly (JsxSpreadAttribute | JsxAttribute)[], children?: PropertyAssignment | undefined, callee?: Expression) {
         const target = getEmitScriptTarget(compilerOptions);
         return target && target >= ScriptTarget.ES2018 ? factory.createObjectLiteralExpression(transformJsxAttributesToProps(attrs, children)) :
             transformJsxAttributesToExpression(attrs, children);

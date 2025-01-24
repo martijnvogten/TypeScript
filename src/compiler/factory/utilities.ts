@@ -244,6 +244,36 @@ function createJsxFragmentFactoryExpression(factory: NodeFactory, jsxFragmentFac
 }
 
 /** @internal */
+export function createIncrementalDOMExpressionForJsxElement(factory: NodeFactory, callee: Expression, openTagCalls: Expression, children: readonly Expression[] | undefined, location: TextRange): LeftHandSideExpression {
+    const argumentsList: Expression[] = [];
+
+    const hasChildren = children && children.length > 0;
+    if (hasChildren) {
+        if (children.length > 1) {
+            for (const child of children) {
+                startOnNewLine(child);
+                const textExpression = factory.createCallExpression(callee, /*typeArguments*/ undefined, [factory.createStringLiteral("text"), child]);
+                argumentsList.push(textExpression);
+            }
+        }
+        else {
+            const textExpression = factory.createCallExpression(callee, /*typeArguments*/ undefined, [factory.createStringLiteral("text"), children[0]]);
+            argumentsList.push(textExpression);
+        }
+    }
+
+    return setTextRange(
+        factory.createCallExpression(
+            callee,
+            /*typeArguments*/ undefined,
+            [factory.createStringLiteral("elementClose"), openTagCalls, ...argumentsList],
+        ),
+        location,
+    );
+}
+
+
+/** @internal */
 export function createExpressionForJsxElement(factory: NodeFactory, callee: Expression, tagName: Expression, props: Expression | undefined, children: readonly Expression[] | undefined, location: TextRange): LeftHandSideExpression {
     const argumentsList = [tagName];
     if (props) {

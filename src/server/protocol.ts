@@ -3240,6 +3240,7 @@ export const enum JsxEmit {
     React = "react",
     ReactJSX = "react-jsx",
     ReactJSXDev = "react-jsxdev",
+    IncrementalDOM = "incrementaldom",
 }
 
 export const enum ModuleKind {

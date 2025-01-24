@@ -7562,6 +7562,7 @@ export const enum JsxEmit {
     ReactNative = 3,
     ReactJSX = 4,
     ReactJSXDev = 5,
+    IncrementalDOM = 6
 }
 
 /** @deprecated */
