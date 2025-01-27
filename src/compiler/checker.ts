@@ -2419,11 +2419,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     function getJsxEmitType(location: Node | undefined): JsxEmit {
         if (location) {
             const file = getSourceFileOfNode(location);
-            console.log("FILE", file.fileName);
             if (file) {
                 const localJsxEmit = getLocalJsxEmit(file);
                 if (localJsxEmit) {
-                    console.log("GETJSXEMITTYPE LOCAL", localJsxEmit);
                     return file.localJsxEmit = localJsxEmit;
                 }
             }
@@ -2434,7 +2432,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
                 _jsxEmit = compilerOptions.jsx;
             }
         }
-        console.log("GETJSXEMITTYPE NON_LOCAL", _jsxEmit);
         return _jsxEmit;
     }
 
