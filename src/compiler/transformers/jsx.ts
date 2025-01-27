@@ -398,6 +398,7 @@ export function transformJsx(context: TransformationContext): (x: SourceFile | B
     
     function visitJsxOpeningLikeElementCreateElement(node: JsxOpeningLikeElement, children: readonly JsxChild[] | undefined, isChild: boolean, location: TextRange) {
         const tagName = getTagName(node);
+        const emitType = context.getEmitResolver().getJsxEmitType(currentSourceFile);
         const callee = currentFileState.importSpecifier === undefined
         ? createJsxFactoryExpression(
             factory,
@@ -409,7 +410,7 @@ export function transformJsx(context: TransformationContext): (x: SourceFile | B
         
         const attrs = node.attributes.properties;
 
-        const element = compilerOptions.jsx === JsxEmit.IncrementalDOM
+        const element = emitType === JsxEmit.IncrementalDOM
         ? createIncrementalDOMExpressionForJsxElement(
             factory,
             callee,

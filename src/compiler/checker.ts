@@ -1157,6 +1157,15 @@ let nextNodeId = 1;
 let nextMergeId = 1;
 let nextFlowId = 1;
 
+const JsxEmitNames: {[name: string]: JsxEmit} = {
+    "none": JsxEmit.None,
+    "preserve": JsxEmit.Preserve,
+    "react": JsxEmit.React,
+    "react-jsx": JsxEmit.ReactJSX,
+    "react-jsxdev": JsxEmit.ReactJSXDev,
+    "incrementaldom": JsxEmit.IncrementalDOM,
+};
+
 const enum IterationUse {
     AllowsSyncIterablesFlag = 1 << 0,
     AllowsAsyncIterablesFlag = 1 << 1,
@@ -1867,6 +1876,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
             const jsxFragmentFactory = getJsxFragmentFactoryEntity(n);
             return jsxFragmentFactory && unescapeLeadingUnderscores(getFirstIdentifier(jsxFragmentFactory).escapedText);
         },
+        getJsxEmitType: n => {
+            return getJsxEmitType(n);
+        },
         getAccessibleSymbolChain,
         getTypePredicateOfSignature,
         resolveExternalModuleName: moduleSpecifierIn => {
@@ -2349,6 +2361,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     var typeofType = createTypeofType();
 
     var _jsxNamespace: __String;
+    var _jsxEmit: JsxEmit;
     var _jsxFactoryEntity: EntityName | undefined;
 
     var subtypeRelation = new Map<string, RelationComparisonResult>();
@@ -2403,6 +2416,28 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         return type;
     }
 
+    function getJsxEmitType(location: Node | undefined): JsxEmit {
+        if (location) {
+            const file = getSourceFileOfNode(location);
+            console.log("FILE", file.fileName);
+            if (file) {
+                const localJsxEmit = getLocalJsxEmit(file);
+                if (localJsxEmit) {
+                    console.log("GETJSXEMITTYPE LOCAL", localJsxEmit);
+                    return file.localJsxEmit = localJsxEmit;
+                }
+            }
+        }
+        if (!_jsxEmit) {
+            _jsxEmit = JsxEmit.None;
+            if (compilerOptions.jsx) {
+                _jsxEmit = compilerOptions.jsx;
+            }
+        }
+        console.log("GETJSXEMITTYPE NON_LOCAL", _jsxEmit);
+        return _jsxEmit;
+    }
+
     function getJsxNamespace(location: Node | undefined): __String {
         if (location) {
             const file = getSourceFileOfNode(location);
@@ -2451,6 +2486,24 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
             _jsxFactoryEntity = factory.createQualifiedName(factory.createIdentifier(unescapeLeadingUnderscores(_jsxNamespace)), "createElement");
         }
         return _jsxNamespace;
+    }
+
+    function getLocalJsxEmit(file: SourceFile): JsxEmit | undefined {
+        if (file.localJsxEmit) {
+            return file.localJsxEmit;
+        }
+        const jsxEmitPragma = file.pragmas.get("jsxemit");
+        if (jsxEmitPragma) {
+            const chosenPragma = isArray(jsxEmitPragma) ? jsxEmitPragma[0] : jsxEmitPragma;
+            const entityName = parseIsolatedEntityName(chosenPragma.arguments.factory, languageVersion);
+            visitNode(entityName, markAsSynthetic);
+            if (entityName) {
+                const stringValue = getFirstIdentifier(entityName).escapedText;
+                if (Object.keys(JsxEmitNames).includes(stringValue.toString())) {
+                    return file.localJsxEmit = JsxEmitNames[stringValue.toString()];
+                }
+            }
+        }
     }
 
     function getLocalJsxNamespace(file: SourceFile): __String | undefined {
@@ -50794,6 +50847,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
             },
             getJsxFactoryEntity,
             getJsxFragmentFactoryEntity,
+            getJsxEmitType,
             isBindingCapturedByNode: (node, decl) => {
                 const parseNode = getParseTreeNode(node);
                 const parseDecl = getParseTreeNode(decl);

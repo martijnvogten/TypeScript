@@ -10654,6 +10654,7 @@ export function processPragmasIntoFields(context: PragmaContext, reportDiagnosti
             case "jsxfrag":
             case "jsximportsource":
             case "jsxruntime":
+            case "jsxemit":
                 return; // Accessed directly
             default:
                 Debug.fail("Unhandled pragma kind"); // Can this be made into an assertNever in the future?

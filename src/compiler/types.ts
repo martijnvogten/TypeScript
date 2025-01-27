@@ -4444,6 +4444,7 @@ export interface SourceFile extends Declaration, LocalsContainer {
     /** @internal */ localJsxFragmentNamespace?: __String;
     /** @internal */ localJsxFactory?: EntityName;
     /** @internal */ localJsxFragmentFactory?: EntityName;
+    /** @internal */ localJsxEmit?: JsxEmit;
 
     /** @internal */ endFlowNode?: FlowNode;
 
@@ -5383,6 +5384,7 @@ export interface TypeChecker {
     resolveName(name: string, location: Node | undefined, meaning: SymbolFlags, excludeGlobals: boolean): Symbol | undefined;
     /** @internal */ getJsxNamespace(location?: Node): string;
     /** @internal */ getJsxFragmentFactory(location: Node): string | undefined;
+    /** @internal */ getJsxEmitType(location: Node): JsxEmit | undefined;
 
     /**
      * Note that this will return undefined in the following case:
@@ -5880,6 +5882,7 @@ export interface EmitResolver {
     isLiteralConstDeclaration(node: VariableDeclaration | PropertyDeclaration | PropertySignature | ParameterDeclaration): boolean;
     getJsxFactoryEntity(location?: Node): EntityName | undefined;
     getJsxFragmentFactoryEntity(location?: Node): EntityName | undefined;
+    getJsxEmitType(location?: Node): JsxEmit | undefined;
     isBindingCapturedByNode(node: Node, decl: VariableDeclaration | BindingElement): boolean;
     getDeclarationStatementsForSourceFile(node: SourceFile, flags: NodeBuilderFlags, internalFlags: InternalNodeBuilderFlags, tracker: SymbolTracker): Statement[] | undefined;
     isImportRequiredByAugmentation(decl: ImportDeclaration): boolean;
@@ -10213,6 +10216,10 @@ export const commentPragmas: ConcretePragmaSpecs = {
         args: [{ name: "factory" }],
         kind: PragmaKindFlags.MultiLine,
     },
+    "jsxemit": {
+        args: [{ name: "factory" }],
+        kind: PragmaKindFlags.MultiLine,
+    },
 } as const;
 
 export const enum JSDocParsingMode {
@@ -10333,6 +10340,12 @@ export interface ConcretePragmaSpecs {
         readonly kind: PragmaKindFlags.MultiLine;
     };
     readonly "jsxruntime": {
+        readonly args: readonly [{
+            readonly name: "factory";
+        }];
+        readonly kind: PragmaKindFlags.MultiLine;
+    };
+    readonly "jsxemit": {
         readonly args: readonly [{
             readonly name: "factory";
         }];
